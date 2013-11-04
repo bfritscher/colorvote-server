@@ -1,0 +1,25 @@
+{
+  "name": "colorvote-server",
+  "version": "0.0.1",
+  "description": "",
+  "main": "app.js",
+  "dependencies": {
+    "primus": "~1.4.4",
+    "primus-rooms": "~1.1.1",
+    "engine.io": "~0.7.10",
+    "monk": "~0.7.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/bfritscher/colorvote-server.git"
+  },
+  "author": "Boris Fritscher",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bfritscher/colorvote-server/issues"
+  }
+}

@@ -1,0 +1,56 @@
+<script src="/primus/primus.js"></script>
+<script>
+var primus = Primus.connect('ws://debian:3000');
+
+var protocol = {
+	'q': 'question',
+	'r': 'rooms'
+}
+
+primus.on('open', function () {
+	primus.on('data', function (data) {
+		data = data || {};
+		var obj = protocol[data.o] || data.o,
+		property = data.p,
+		value = data.v;
+		if(!window[obj]){
+			window[obj] = {};
+		}
+		if(value){
+			if(window[obj][property]){
+				window[obj][property] = value;
+			}else{
+				window[obj] = value;
+			}
+		}
+		console.log('msg');
+	});
+});
+
+function getRooms(){
+	primus.write({a:'getRooms'});
+}
+
+function vote(){
+	primus.write({a:'v', u: 1, q: 1, v:2});
+}
+
+function join(){
+	//ifadmin -admin
+	primus.write({a:'join', v:'room'});
+}
+
+function leave(){
+	//ifadmin -admin
+	primus.write({a:'leave', v:'room'});
+}
+
+function adminops(){
+	primus.write({a:'questionAction', q: 1});
+	primus.write({a:'changeNumAnswers', q: 1, v:7});
+	primus.write({a:'getHistory', r: 1});
+	
+	primus.write({a:'addRoom', v:'roomname'});
+	primus.write({a:'renameRoom', r: 1, v:'roomname'});	
+}
+</script>
