@@ -192,8 +192,8 @@ primus.on('connection', function (spark) {
                 //send stopped to clients
                 spark.room(room.name).write({o:'q', p:'state', v:'stopped'});
                 //send full question to admins
-                question.name = room.name + '-admin';
-                spark.room(question.name).write({o:'q', v:question});
+                question.room = room.name + '-admin';
+                spark.room(question.room).write({o:'q', v:question});
                 //and self
                 spark.write({o:'q', v:question});
               });
@@ -209,8 +209,8 @@ primus.on('connection', function (spark) {
                 vote: ''
               }});
               //and admins
-              question.name = room.name + '-admin';
-              spark.room(question.name).write({o:'q', v:question});
+              question.room = room.name + '-admin';
+              spark.room(question.room).write({o:'q', v:question});
               //and self
               spark.write({o:'q', v:question});
             });
