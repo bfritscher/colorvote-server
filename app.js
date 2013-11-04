@@ -3,6 +3,10 @@ var Config = {
   mongoDB: 'localhost/colorvote',
   clientID: '192909161969.apps.googleusercontent.com'
 };
+require('nodetime').profile({
+    accountKey: '79ba4e395dcba1c7a1d6e0dfaf2f8a41262dc0b5', 
+    appName: 'Node.js Application'
+  });
 
 var https = require('https'),
   server = require('http').createServer(handler),

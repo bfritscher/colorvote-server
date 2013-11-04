@@ -7,7 +7,8 @@
     "primus": "~1.4.4",
     "primus-rooms": "~1.1.1",
     "engine.io": "~0.7.10",
-    "monk": "~0.7.1"
+    "monk": "~0.7.1",
+    "nodetime": "~0.8.14"
   },
   "devDependencies": {},
   "scripts": {
