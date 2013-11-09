@@ -5,7 +5,7 @@ var Config = {
 };
 require('nodetime').profile({
     accountKey: '79ba4e395dcba1c7a1d6e0dfaf2f8a41262dc0b5', 
-    appName: 'Node.js Application'
+    appName: 'ColorVote'
   });
 
 var https = require('https'),
@@ -54,10 +54,14 @@ primus.on('connection', function (spark) {
     data = data || {};
     var action = data.a;
     
-    if('getRooms' === action){
+    function sendRooms(){
       Rooms.find({}, function(err, docs){
         spark.write({o:'r', v:docs});
       });
+    }
+    
+    if('getRooms' === action){
+      sendRooms();
     }
     
     if('v' === action){
@@ -175,47 +179,49 @@ primus.on('connection', function (spark) {
     }
     
     if ('questionAction' === action) {
-      validateUser(data.u, data.t, function(){
-        getQuestionAndRoom(data.v, function(question, room){
-          if(question.state === 'started'){
-            //calculate final values
-            Votes.find({q: question._id})
-            .success(function(votes){                            
-              Questions.findAndModify(question._id, {$set: {state: 'stopped',
-                dateStopped: new Date(),
-                votes: votes.length,
-                results: createQuestionResult(votes, question.possibleAnswers),
-                modified: new Date()}
-              },
-              {'new':true})
-              .success(function(question){
-                //send stopped to clients
-                spark.room(room.name).write({o:'q', p:'state', v:'stopped'});
-                //send full question to admins
+      validateUser(data.u, data.t, function(user){
+        if(user.admin) {
+          getQuestionAndRoom(data.v, function(question, room){
+            if(question.state === 'started'){
+              //calculate final values
+              Votes.find({q: question._id})
+              .success(function(votes){                            
+                Questions.findAndModify(question._id, {$set: {state: 'stopped',
+                  dateStopped: new Date(),
+                  votes: votes.length,
+                  results: createQuestionResult(votes, question.possibleAnswers),
+                  modified: new Date()}
+                },
+                {'new':true})
+                .success(function(question){
+                  //send stopped to clients
+                  spark.room(room.name).write({o:'q', p:'state', v:'stopped'});
+                  //send full question to admins
+                  question.room = room.name + '-admin';
+                  spark.room(question.room).write({o:'q', v:question});
+                  //and self
+                  spark.write({o:'q', v:question});
+                });
+              });            
+            }else if(question.state === 'stopped'){
+              createQuestionInRoom( question.roomId, question.possibleAnswers, function(question){
+                //send new question to users
+                spark.room(room.name).write({o:'q', v:{
+                  _id: question._id,
+                  room: room.name,
+                  possibleAnswers: question.possibleAnswers,
+                  state: question.state,
+                  vote: ''
+                }});
+                //and admins
                 question.room = room.name + '-admin';
                 spark.room(question.room).write({o:'q', v:question});
                 //and self
                 spark.write({o:'q', v:question});
               });
-            });            
-          }else if(question.state === 'stopped'){
-            createQuestionInRoom( question.roomId, question.possibleAnswers, function(question){
-              //send new question to users
-              spark.room(room.name).write({o:'q', v:{
-                _id: question._id,
-                room: room.name,
-                possibleAnswers: question.possibleAnswers,
-                state: question.state,
-                vote: ''
-              }});
-              //and admins
-              question.room = room.name + '-admin';
-              spark.room(question.room).write({o:'q', v:question});
-              //and self
-              spark.write({o:'q', v:question});
-            });
-          }
-        });
+            }
+          });
+        }
       });
     }
     
@@ -236,17 +242,19 @@ primus.on('connection', function (spark) {
     if('possibleAnswers' === action){
       //TODO: validate int 0<max
       validateUser(data.u, data.t, function(){
-        getQuestionAndRoom(data.q, function(question, room){
-          var possibleAnswers = data.v || Config.numMaxAnswers;
-          possibleAnswers = parseInt(possibleAnswers);
-          Questions.update({_id: question._id},
-            {$set:{possibleAnswers: possibleAnswers}})
-          .success(function(){
-            var payload = {o:'q', p:'possibleAnswers', v: possibleAnswers}
-            spark.room(room.name).write(payload);
-            spark.room(room.name + '-admin').write(payload);
+        if(user.admin) {
+          getQuestionAndRoom(data.q, function(question, room){
+            var possibleAnswers = data.v || Config.numMaxAnswers;
+            possibleAnswers = parseInt(possibleAnswers);
+            Questions.update({_id: question._id},
+              {$set:{possibleAnswers: possibleAnswers}})
+            .success(function(){
+              var payload = {o:'q', p:'possibleAnswers', v: possibleAnswers}
+              spark.room(room.name).write(payload);
+              spark.room(room.name + '-admin').write(payload);
+            });
           });
-        });
+        }
       });
     }
     
@@ -262,7 +270,7 @@ primus.on('connection', function (spark) {
       Users.findById(userId)
       .success(function(user){
         if(user){
-          //TODO should check timeout
+          //TODO should check timeout of token on server side also
           if(user.access_token === access_token){
             success(user);
           }else{
@@ -286,23 +294,68 @@ primus.on('connection', function (spark) {
             });
           }
         }else{
-          error('user not found');
+          error({error:'user_not_found'});
         }
       });
     }
     
-    if('addAdmin' === action){
-      validateUser(data.u, data.t, function(){
-        Users.insert({_id: data.v, admin: true});
+    function sendUsers(){
+      Users.find()
+      .success(function(users){
+        spark.write({o:'users', v: users});
       });
     }
+    
+    if('makeAdmin' === action){
+      validateUser(data.u, data.t, function(user){
+        if(user.admin) {
+          Users.update(data.v.id, {$set:{admin: data.v.admin}})
+          .on('complete', function(err, doc){
+            sendUsers();
+          });
+        }
+      });
+    }
+    
+    if('getUsers' === action){
+      validateUser(data.u, data.t, function(user){
+        if(user.admin) {
+          sendUsers();
+        }
+      });
+    }
+    
+    if('updateRoom' === action){
+      validateUser(data.u, data.t, function(user){
+        if(user.admin) {
+          if(!data.v._id){
+            data.v._id = Rooms.id();
+          }
+          Rooms.update(data.v._id, data.v, {upsert:true})
+          .success(function(){
+            sendRooms();
+          });
+        }
+      });
+    }
+    //cleanup votes
+    //var qids = db.questions.find({},{_id:true}).map(function(a){return a._id})
+    //Votes.remove({questionId: {$nin: qids}})
     
     if('login' === action){
       var userId = data.u,
         access_token = data.t;
       validateUser(userId, access_token, function(user){
+        if(!user.email){
+          Users.update(data.u, {$set:{email: data.v}});
+        }
+        Users.update(data.u, {$set:{lastSeen: new Date()}});
         spark.write({o:'user', v: user});
       }, function(error){
+        //user is not found or token invalid
+        if('user_not_found' === error.error){
+          Users.insert({_id: Users.id(data.u), admin: false, email: data.v});
+        }
         spark.write({o:'user', v: {_id: data.u, admin: false}});
       });
     }
