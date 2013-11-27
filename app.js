@@ -241,7 +241,7 @@ primus.on('connection', function (spark) {
     
     if('possibleAnswers' === action){
       //TODO: validate int 0<max
-      validateUser(data.u, data.t, function(){
+      validateUser(data.u, data.t, function(user){
         if(user.admin) {
           getQuestionAndRoom(data.q, function(question, room){
             var possibleAnswers = data.v || Config.numMaxAnswers;
