@@ -5,10 +5,10 @@
   "main": "app.js",
   "dependencies": {
     "dotenv": "^1.2.0",
-    "engine.io": "~0.7.10",
-    "monk": "~0.7.1",
-    "primus": "~1.4.4",
-    "primus-rooms": "~1.1.1"
+    "engine.io": "~1.5.4",
+    "monk": "~1.0.1",
+    "primus": "~4.0.1",
+    "primus-rooms": "~3.3.0"
   },
   "devDependencies": {},
   "scripts": {

@@ -17,6 +17,8 @@ var https = require('https'),
   Rooms = db.get('rooms'),
   Votes = db.get('votes'),
   Users = db.get('users');
+  //FIX bug assume ObjectID
+  Users.id = function (str) { return str; };
 
 function handler (req, res) {
   fs.readFile(__dirname + '/index.html',
