@@ -1,0 +1,13 @@
+mongodb:
+  image: mongo:3
+  ports:
+    - "27017:27017"
+colorvote:
+  build: .
+  env_file: .env
+  volumes:
+    - app.js:/colorvote/app.js
+  ports:
+    - "3000:3000"
+  links:
+    - mongodb:mongo
